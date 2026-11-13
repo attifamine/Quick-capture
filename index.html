@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; connect-src 'self' https://tasks.googleapis.com https://www.googleapis.com https://accounts.google.com; frame-src https://accounts.google.com; style-src 'self' https://accounts.google.com; img-src 'self' data:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#1f3a5f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+<title>Quick Capture</title>
+</head>
+<body>
+
+<header>
+  <h1>Quick Capture</h1>
+  <div class="auth">
+    <span id="status">Not signed in</span>
+    <button id="signin" class="small">Sign in</button>
+    <button id="signout" class="small ghost" hidden>Sign out</button>
+  </div>
+</header>
+
+<div id="setupWarning" class="banner" hidden>
+  Setup needed: open <b>config.js</b> and paste your Google Client ID (see README).
+</div>
+
+<main>
+  <section id="viewCapture">
+    <label for="note" class="sr">What is on your mind?</label>
+    <textarea id="note" rows="4" placeholder="Call Ahmed about the paperwork…" autocomplete="off"></textarea>
+
+    <div class="row">
+      <button id="mic" class="mic" aria-label="Speak">🎤 Speak</button>
+      <select id="lang" aria-label="Voice language">
+        <option value="en-US">English</option>
+        <option value="ar-MA">العربية</option>
+        <option value="fr-FR">Français</option>
+        <option value="ja-JP">日本語</option>
+      </select>
+    </div>
+
+    <p class="hint">When should it remind you?</p>
+    <div id="quick" class="grid"></div>
+    <button id="pick" class="wide ghost">Pick another time…</button>
+  </section>
+
+  <section id="viewReview" hidden>
+    <div class="row between">
+      <h2>Still open</h2>
+      <button id="refresh" class="small ghost">Refresh</button>
+    </div>
+    <div id="list" class="list"></div>
+
+    <div class="nightly">
+      <p class="hint">Nightly reminder to open this screen</p>
+      <div class="row">
+        <input type="time" id="revTime" value="22:00" aria-label="Review time">
+        <button id="nightly" class="small">Set every night</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button id="tabCapture" class="tab on">✏️ Capture</button>
+  <button id="tabReview" class="tab">🌙 Review</button>
+</nav>
+
+<div id="sheet" class="sheet" hidden>
+  <div class="sheetBox">
+    <h3>Choose a time</h3>
+    <div id="sheetPresets" class="grid"></div>
+    <input type="datetime-local" id="sheetInput" aria-label="Date and time">
+    <div class="row">
+      <button id="sheetOk">Use this time</button>
+      <button id="sheetCancel" class="ghost">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</body>
+</html>
