@@ -1,7 +1,7 @@
 // Keeps the app shell available offline. It never touches Google API traffic
 // and never stores shared message text (URLs with a query string are not cached).
-const CACHE = 'qc-v1';
-const FILES = ['./', 'index.html', 'style.css', 'app.js', 'config.js',
+const CACHE = 'qc-v2';
+const FILES = ['./', 'index.html', 'style.css', 'app.js', 'parse.js', 'config.js',
                'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {

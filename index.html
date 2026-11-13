@@ -29,21 +29,30 @@
 <main>
   <section id="viewCapture">
     <label for="note" class="sr">What is on your mind?</label>
-    <textarea id="note" rows="4" placeholder="Call Ahmed about the paperwork…" autocomplete="off"></textarea>
+    <textarea id="note" rows="4" placeholder="Tap the keyboard 🎤 and speak. Example: call Ahmed tomorrow at 5pm" autocomplete="off" autofocus></textarea>
 
-    <div class="row">
-      <button id="mic" class="mic" aria-label="Speak">🎤 Speak</button>
-      <select id="lang" aria-label="Voice language">
-        <option value="en-US">English</option>
-        <option value="ar-MA">العربية</option>
-        <option value="fr-FR">Français</option>
-        <option value="ja-JP">日本語</option>
-      </select>
+    <div class="chips">
+      <button class="chip" data-t="Call back ">📞 Call back</button>
+      <button class="chip" data-t="Reply to ">💬 Reply to</button>
+      <button class="chip" data-t="Buy ">🛒 Buy</button>
+      <button class="chip" data-t="Pay ">💳 Pay</button>
     </div>
 
-    <p class="hint">When should it remind you?</p>
+    <div id="parsed" class="parsed" hidden>
+      <button id="parsedBtn"></button>
+    </div>
+
+    <p class="hint" id="quickHint">When should it remind you?</p>
     <div id="quick" class="grid"></div>
     <button id="pick" class="wide ghost">Pick another time…</button>
+
+    <section class="today">
+      <div class="row between">
+        <h2>Today</h2>
+        <button id="todayBtn" class="small ghost">Show list</button>
+      </div>
+      <div id="todayList" class="list"></div>
+    </section>
   </section>
 
   <section id="viewReview" hidden>
@@ -83,6 +92,7 @@
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
 <script src="config.js"></script>
+<script src="parse.js"></script>
 <script src="app.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>

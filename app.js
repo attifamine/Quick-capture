@@ -172,19 +172,21 @@
   let busy = false;
   function setBusy(on) {
     busy = on;
-    document.querySelectorAll('#quick button, #pick').forEach(b => { b.disabled = on; });
+    document.querySelectorAll('#quick button, #pick, #parsedBtn').forEach(b => { b.disabled = on; });
   }
 
-  async function capture(when) {
+  async function capture(when, titleOverride) {
     if (busy) return;
-    const title = $('note').value.trim();
+    const title = (titleOverride || $('note').value).trim();
     if (!title) return toast('Type or speak something first', true);
     setBusy(true);
     try {
       await addItem(title, when);
       $('note').value = '';
       lsSet('qc_draft', null);
+      updatePreview();
       toast('Saved. Reminder: ' + fmt(when));
+      loadToday();
     } catch (e) {
       toast(e.message, true); // the text stays in the box, nothing is lost
     } finally {
@@ -192,37 +194,39 @@
     }
   }
 
+  // Suggest a time found inside the note (English), one tap to save.
+  function updatePreview() {
+    const text = $('note').value.trim();
+    const p = text && window.parseTime ? window.parseTime(text) : null;
+    if (!p || !p.title) {
+      $('parsed').hidden = true;
+      $('quickHint').textContent = 'When should it remind you?';
+      return;
+    }
+    $('parsedBtn').textContent = 'Save: ' + p.title + ' · ' + fmt(p.when);
+    $('parsedBtn').onclick = () => capture(p.when, p.title);
+    $('parsed').hidden = false;
+    $('quickHint').textContent = 'Or choose another time:';
+  }
+
+  document.querySelectorAll('.chip').forEach(b => {
+    b.onclick = () => {
+      const n = $('note');
+      n.value = b.dataset.t + n.value;
+      lsSet('qc_draft', n.value);
+      n.focus();
+      n.setSelectionRange(n.value.length, n.value.length);
+      updatePreview();
+    };
+  });
+
   $('pick').onclick = async () => {
     if (!$('note').value.trim()) return toast('Type or speak something first', true);
     const d = await pickTime();
     if (d) capture(d);
   };
 
-  $('note').addEventListener('input', () => lsSet('qc_draft', $('note').value));
-
-  // ---------- voice ----------
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let rec = null;
-  $('lang').value = lsGet('qc_lang') || 'en-US';
-  $('lang').onchange = () => lsSet('qc_lang', $('lang').value);
-  if (!SR) $('mic').hidden = true;
-  $('mic').onclick = () => {
-    if (rec) { rec.stop(); return; }
-    rec = new SR();
-    rec.lang = $('lang').value;
-    rec.interimResults = false;
-    rec.onresult = e => {
-      const text = Array.from(e.results).map(r => r[0].transcript).join(' ');
-      const n = $('note');
-      n.value = (n.value ? n.value + ' ' : '') + text;
-      lsSet('qc_draft', n.value);
-    };
-    rec.onerror = () => toast('Voice not available. Use the microphone on your keyboard.', true);
-    rec.onend = () => { rec = null; $('mic').classList.remove('on'); $('mic').textContent = '🎤 Speak'; };
-    $('mic').classList.add('on');
-    $('mic').textContent = '⏹ Stop';
-    try { rec.start(); } catch (e) { rec = null; }
-  };
+  $('note').addEventListener('input', () => { lsSet('qc_draft', $('note').value); updatePreview(); });
 
   // ---------- review screen ----------
   async function loadList() {
@@ -266,17 +270,53 @@
       if (cls) b.className = cls;
       b.onclick = async () => {
         btns.querySelectorAll('button').forEach(x => { x.disabled = true; });
-        try { await fn(); await loadList(); }
+        try { await fn(); await refreshAll(); }
         catch (e) { toast(e.message, true); btns.querySelectorAll('button').forEach(x => { x.disabled = false; }); }
       };
       btns.appendChild(b);
     };
     mk('Done', 'done', () => markDone(t));
-    mk('Move', 'ghost', async () => { const d = await pickTime(); if (!d) throw new Error('Cancelled'); await moveItem(t, d); });
+    mk('Snooze', 'ghost', async () => { const d = await pickTime(); if (!d) throw new Error('Cancelled'); await moveItem(t, d); });
     mk('Delete', 'del', () => deleteItem(t));
     card.append(title, when, btns);
     return card;
   }
+
+  let todayLoaded = false;
+  async function loadToday() {
+    const box = $('todayList');
+    todayLoaded = true;
+    $('todayBtn').hidden = true;
+    try {
+      const d = await api(TASKS + '?showCompleted=false&showHidden=false&maxResults=100');
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
+      const items = (d.items || []).filter(t => {
+        const w = meta(t).when;
+        return t.title && t.status === 'needsAction' && w && w <= end;
+      });
+      items.sort((a, b) => meta(a).when - meta(b).when);
+      box.textContent = '';
+      if (!items.length) {
+        const p = document.createElement('div');
+        p.className = 'empty';
+        p.textContent = 'Nothing due today. 🌙';
+        box.appendChild(p);
+        return;
+      }
+      items.forEach(t => box.appendChild(renderItem(t)));
+    } catch (e) {
+      todayLoaded = false;
+      box.textContent = '';
+      $('todayBtn').hidden = false;
+      toast(e.message, true);
+    }
+  }
+  async function refreshAll() {
+    if (!$('viewReview').hidden) await loadList();
+    if (todayLoaded) await loadToday();
+  }
+  $('todayBtn').onclick = loadToday;
 
   $('refresh').onclick = loadList;
 
@@ -312,7 +352,7 @@
   $('tabCapture').onclick = () => show('capture');
   $('tabReview').onclick = () => show('review');
 
-  $('signin').onclick = () => getToken().catch(e => toast(e.message, true));
+  $('signin').onclick = () => getToken().then(() => loadToday()).catch(e => toast(e.message, true));
   $('signout').onclick = () => {
     const t = token;
     token = null; tokenExp = 0;
@@ -321,6 +361,9 @@
     if (t && window.google && google.accounts) google.accounts.oauth2.revoke(t, () => {});
     toast('Signed out and access revoked');
     $('list').textContent = '';
+    $('todayList').textContent = '';
+    $('todayBtn').hidden = false;
+    todayLoaded = false;
   };
 
   // ---------- startup ----------
@@ -337,6 +380,8 @@
     $('note').value = lsGet('qc_draft') || '';
   }
 
+  updatePreview();
+  setTimeout(() => $('note').focus(), 300);
   renderQuick();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) renderQuick(); });
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
